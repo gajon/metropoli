@@ -13,47 +13,51 @@ module Metropoli
     
     def metropoli_for(metropoli_model, opts = {})
       metropoli_relation = metropoli_model.to_s
+      relation = opts[:as] && opts[:as].to_s || ConfigurationHelper.relation_name_for(metropoli_relation)
       relation_class_name = ConfigurationHelper.relation_class_for(metropoli_relation)
-      relation_name = (opts[:as] ? opts[:as].to_s : nil) || ConfigurationHelper.relation_name_for(metropoli_relation)
       relation_class = eval(relation_class_name)
-      relation_collector = "metropoli_#{relation_name.pluralize}".to_sym
 
-      self.belongs_to relation_name.to_sym, :class_name => relation_class_name
+      input_string = "_metropoli_#{relation}_name"
+      relation_collector = "_metropoli_#{relation.pluralize}"
 
-      define_method "#{relation_name}_name=" do |attr_value|
-        write_attribute "#{relation_name}_name", attr_value
-        write_attribute relation_collector, (relation_class.with_values(attr_value) || [])
-        if read_attribute(relation_collector).size == 1
-          send "#{relation_name}=", read_attribute(relation_collector).first
+      self.send :attr_accessor, input_string
+      self.send :attr_accessor, relation_collector
+
+      self.belongs_to relation.to_sym, :class_name => relation_class_name
+
+      define_method "#{relation}_name=" do |attr_value|
+        send "#{input_string}=", attr_value
+        send "#{relation_collector}=", (relation_class.with_values(attr_value) || [])
+
+        if send(relation_collector).size == 1
+          send "#{relation}=", send(relation_collector).first
         else
-          send "#{relation_name}=", nil
+          send "#{relation}=", nil
         end
       end
 
-      define_method "#{relation_name}_name" do
-        metropoli_attribute = send(relation_name)
-        return read_attribute("#{relation_name}_name") if read_attribute("#{relation_name}_name")
-        return metropoli_attribute.to_s if metropoli_attribute
+      define_method "#{relation}_name" do
+        send(input_string) || send(relation).to_s
       end
       
       #Validation Methods
       if opts[:required] || opts[:required_if]
         #TODO optimize this
         if opts[:required_if]
-          validates_presence_of   relation_name, :if => opts[:required_if]
+          validates_presence_of   relation, :if => opts[:required_if]
         else
-          validates_presence_of   relation_name
+          validates_presence_of   relation
         end
         validate do |record|
-          collection = record.read_attribute(relation_collector)
-          relation = record.read_attribute(relation_name)
+          collection = record.send(relation_collector)
+          #relation_value = record.read_attribute(relation)
           needs_validation = opts[:required_if].nil? ? true : record.send(opts[:required_if])
           if collection && needs_validation
             if (collection.size > 1 rescue nil)
-              record.errors.add(relation_name, Metropoli::Messages.error(metropoli_relation, :found_too_many))
+              record.errors.add(relation, Metropoli::Messages.error(metropoli_relation, :found_too_many))
             end
             if (collection.size == 0)
-              record.errors.add(relation_name, Metropoli::Messages.error(metropoli_relation, :couldnt_find))
+              record.errors.add(relation, Metropoli::Messages.error(metropoli_relation, :couldnt_find))
             end
           end
         end

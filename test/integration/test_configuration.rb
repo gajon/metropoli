@@ -9,13 +9,13 @@ class TestConfiguration < ActionController::IntegrationTest
   test 'autocomplete limit' do
     30.times { setup }
     
-    get "/cities.json"
+    get "/metropoli/cities.json"
     assert_equal ActiveSupport::JSON.decode(response.body).size, Metropoli.autocomplete_limit
     
-    get "/states.json"
+    get "/metropoli/states.json"
     assert_equal ActiveSupport::JSON.decode(response.body).size, Metropoli.autocomplete_limit
     
-    get "/countries.json"
+    get "/metropoli/countries.json"
     assert_equal ActiveSupport::JSON.decode(response.body).size, Metropoli.autocomplete_limit
   end
   
@@ -25,10 +25,10 @@ class TestConfiguration < ActionController::IntegrationTest
     Metropoli.state_autocomplete_fields = 'name'
     Metropoli.country_autocomplete_fields = 'name'
     
-    get "/states.json"
+    get "/metropoli/states.json"
     assert_nil ActiveSupport::JSON.decode(response.body).first['state']['abbr']
     
-    get "/countries.json"
+    get "/metropoli/countries.json"
     assert_nil ActiveSupport::JSON.decode(response.body).first['country']['abbr']
     
   end
